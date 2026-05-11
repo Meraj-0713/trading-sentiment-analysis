@@ -222,6 +222,46 @@ cast(AVG(win_rate)as decimal(20,2)) as avg_win_rate
 from trader_status 
 group by (case when win_rate>55 then 'consitent_trader' else 'Inconsistent_trader' end)
 
+-- ================================================================
+-- Part C: STRATEGY RECOMMENDATIONS
+-- ================================================================
+
+-- Strategy 1: Trade on Greed, Avoid Neutral
+-- Compares Greed vs Neutral directly to prove the rule
+-- -------------------------------------------------------
+
+SELECT
+f.classification,
+CAST(AVG(CASE WHEN h.side = 'sell' THEN h.closed_pnl END) AS DECIMAL(10,2)) AS avg_pnl,
+CAST(100.0 * SUM(CASE WHEN h.side = 'sell' AND h.closed_pnl > 0 THEN 1.0 ELSE 0.0 END)
+/ COUNT(CASE WHEN h.side = 'sell' THEN 1 END) AS DECIMAL(10,2))  AS win_rate
+FROM historical_data1 h
+JOIN fear_greed_index_ f
+ON h.date = f.date
+WHERE f.classification IN ('Greed', 'Neutral')
+GROUP BY f.classification;
+
+-- ----------------------------------------------------------------
+-- Strategy 2: On Fear Days — Reduce Leverage
+-- Compares High vs Low leverage PnL on Fear days only
+-- ----------------------------------------------------------------
+
+SELECT
+f.classification,
+CASE WHEN h.crossed = 'True' THEN 'High Leverage' ELSE 'Low Leverage' END  AS leverage_type,
+COUNT(CASE WHEN h.side = 'sell' THEN 1 END)  AS trades,
+CAST(AVG(CASE WHEN h.side = 'sell' THEN h.closed_pnl  END) AS DECIMAL(10,2))  AS avg_pnl
+FROM historical_data1 h
+JOIN fear_greed_index_ f ON h.date = f.date
+WHERE f.classification = 'Fear'
+GROUP BY f.classification, h.crossed;
+
+
+
+
+
+
+
 
 
 
